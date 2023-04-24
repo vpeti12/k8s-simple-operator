@@ -1,0 +1,14 @@
+apiVersion: myapp.peter.gyuk/v1alpha1
+kind: SimpleApp
+metadata:
+  labels:
+    app.kubernetes.io/name: simpleapp
+    app.kubernetes.io/instance: simpleapp-sample
+    app.kubernetes.io/part-of: k8s-simple-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: k8s-simple-operator
+  name: simpleapp-sample
+spec:
+  image: "nginx:latest"
+  replicas: 1
+  host: "helloworld.localdev.me"
