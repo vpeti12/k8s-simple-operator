@@ -20,10 +20,24 @@ For local testing, you can use [KIND](https://sigs.k8s.io/kind).
 The Kubernetes cluster should have the following components installed:
 
 #### ingress-nginx
+An Ingress Controller (paired with an Ingress resource) is needed to provide
+external access (HTTP and HTTPS) to the cluster Services (see [kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+for further details).
+
 See the [install instructions](https://kubernetes.github.io/ingress-nginx/deploy/)
 or simply run:
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+```
+
+#### cert-manager
+
+https://github.com/cert-manager/cert-manager
+
+See the [install instructions](https://kubernetes.github.io/ingress-nginx/deploy/)
+or simply run:
+```sh
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
 ```
 
 ### Configure using the Custrom Resource

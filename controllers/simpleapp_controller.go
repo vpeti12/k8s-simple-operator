@@ -112,8 +112,20 @@ func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name + "-ingress",
 			Namespace: instance.Namespace,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class": "nginx",
+				"cert-manager.io/issuer":      "letsencrypt-staging",
+			},
 		},
 		Spec: networkingv1.IngressSpec{
+			TLS: []networkingv1.IngressTLS{
+				{
+					Hosts: []string{
+						instance.Spec.Host,
+					},
+					SecretName: "simpleapp-sample-tls",
+				},
+			},
 			Rules: []networkingv1.IngressRule{
 				{
 					Host: instance.Spec.Host,
@@ -142,7 +154,7 @@ func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	oldDeployment := &appsv1.Deployment{}
 	oldService := &corev1.Service{}
-	oldIigress := &networkingv1.Ingress{}
+	oldIngress := &networkingv1.Ingress{}
 
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: newDeployment.Name, Namespace: newDeployment.Namespace}, oldDeployment)
 	if err != nil && errors.IsNotFound(err) {
@@ -161,12 +173,12 @@ func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		r.Client.Update(context.TODO(), oldService)
 	}
 
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: newIngress.Name, Namespace: newIngress.Namespace}, oldIigress)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: newIngress.Name, Namespace: newIngress.Namespace}, oldIngress)
 	if err != nil && errors.IsNotFound(err) {
 		r.Client.Create(context.TODO(), newIngress)
 	} else {
-		oldIigress.Spec = newIngress.Spec
-		r.Client.Update(context.TODO(), oldIigress)
+		oldIngress.Spec = newIngress.Spec
+		r.Client.Update(context.TODO(), oldIngress)
 	}
 
 	return ctrl.Result{}, nil
