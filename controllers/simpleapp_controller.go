@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	myappv1alpha1 "github.com/vpeti12/k8s-simple-operator/api/v1alpha1"
 )
 
@@ -108,13 +109,25 @@ func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		},
 	}
 
+	newIssuer := &certmanagerv1.Issuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "selfsigned-issuer",
+			Namespace: instance.Namespace,
+		},
+		Spec: certmanagerv1.IssuerSpec{
+			IssuerConfig: certmanagerv1.IssuerConfig{
+				SelfSigned: &certmanagerv1.SelfSignedIssuer{},
+			},
+		},
+	}
+
 	newIngress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name + "-ingress",
 			Namespace: instance.Namespace,
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
-				"cert-manager.io/issuer":      "letsencrypt-staging",
+				"cert-manager.io/issuer":      "selfsigned-issuer",
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -123,7 +136,7 @@ func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 					Hosts: []string{
 						instance.Spec.Host,
 					},
-					SecretName: "simpleapp-sample-tls",
+					SecretName: "tls-secret",
 				},
 			},
 			Rules: []networkingv1.IngressRule{
@@ -152,33 +165,42 @@ func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		},
 	}
 
-	oldDeployment := &appsv1.Deployment{}
-	oldService := &corev1.Service{}
-	oldIngress := &networkingv1.Ingress{}
+	oldDeployment := appsv1.Deployment{}
+	oldService := corev1.Service{}
+	oldIngress := networkingv1.Ingress{}
+	oldIssuer := certmanagerv1.Issuer{}
 
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: newDeployment.Name, Namespace: newDeployment.Namespace}, oldDeployment)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: newDeployment.Name, Namespace: newDeployment.Namespace}, &oldDeployment)
 	if err != nil && errors.IsNotFound(err) {
-		r.Client.Create(context.TODO(), newDeployment)
+		r.Client.Create(ctx, newDeployment)
 
 	} else {
 		oldDeployment.Spec = newDeployment.Spec
-		r.Client.Update(context.TODO(), oldDeployment)
+		r.Client.Update(ctx, &oldDeployment)
 	}
 
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: newService.Name, Namespace: newService.Namespace}, oldService)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: newService.Name, Namespace: newService.Namespace}, &oldService)
 	if err != nil && errors.IsNotFound(err) {
-		r.Client.Create(context.TODO(), newService)
+		r.Client.Create(ctx, newService)
 	} else {
 		oldService.Spec = newService.Spec
-		r.Client.Update(context.TODO(), oldService)
+		r.Client.Update(ctx, &oldService)
 	}
 
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: newIngress.Name, Namespace: newIngress.Namespace}, oldIngress)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: newIssuer.Name, Namespace: newIssuer.Namespace}, &oldIssuer)
 	if err != nil && errors.IsNotFound(err) {
-		r.Client.Create(context.TODO(), newIngress)
+		r.Client.Create(ctx, newIssuer)
+	} else {
+		oldIssuer.Spec = newIssuer.Spec
+		r.Client.Update(ctx, &oldIssuer)
+	}
+
+	err = r.Client.Get(ctx, types.NamespacedName{Name: newIngress.Name, Namespace: newIngress.Namespace}, &oldIngress)
+	if err != nil && errors.IsNotFound(err) {
+		r.Client.Create(ctx, newIngress)
 	} else {
 		oldIngress.Spec = newIngress.Spec
-		r.Client.Update(context.TODO(), oldIngress)
+		r.Client.Update(ctx, &oldIngress)
 	}
 
 	return ctrl.Result{}, nil
