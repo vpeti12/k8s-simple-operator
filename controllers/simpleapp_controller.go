@@ -52,6 +52,11 @@ type SimpleAppReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
+// Business logic: The reconciliation includes creating a new Deployment,
+// Service, Issuer and Ingress based on the SimpleApp API instance if it
+// doesn't already exist or update the specific mentioned resource if it
+// already exists.
+//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *SimpleAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
